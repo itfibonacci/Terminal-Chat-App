@@ -20,39 +20,25 @@ def cleanup():
 	server_socket.close()
 	#sys.exit(0)
 
-# Register the signal handler for Ctrl+C
-signal.signal(signal.SIGINT, signal_handler)
-
-def setup_server():
-
-	global PORT
-	PORT = 54332
-	
-	global server_socket
+def setup_server(PORT):
+	print(f'{get_time()}: Server is starting up...')
 
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 	server_socket.bind(('localhost', PORT))
-
 	server_socket.listen(5)
-
-	# List to store all the connected clients
-	global clients
 	clients = {}
+	print(f'{get_time()}: Server is ready.')
+	return server_socket, clients
 
-def tearDown():
+def tearDown(clients, server_thread):
 	for client_socket in get_clients().values():
 		client_socket.close()
 	server_thread.join()
-
-def get_clients():
-	return clients
 
 def get_time():
 	current_time = datetime.now()
 	# Format the output
 	formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-
 	# return the formatted time
 	return formatted_time
 
@@ -60,23 +46,22 @@ def get_hour_minute():
 	current_time = datetime.now()
 	# Format the output
 	formatted_time = current_time.strftime("%H:%M:%S")
-
 	# return the formatted time
 	return formatted_time
 
-def handle_client(client_socket):
+def handle_client(client_socket, clients):
 	# send a message to the client saying you have been connected and the current time
 	# Get the current date and time
 	print('{}: Established a connection with socket: {}'.format(get_time(),client_socket))
 
 	client_socket.send("Please type your username".encode('utf-8'))
-
 	username = client_socket.recv(1024).decode('utf-8')
+
 	clients[username] = client_socket
 	print('{}: User {} has joined the chat.'.format(get_time(), username))
 	client_socket.send("{}: Welcome to the chat {}".format(get_time(), username).encode('utf-8'))
 	
-	broadcast(f"{username} has joined the chat. There are {len(clients)} ppl in the chat.", username, client_socket)
+	broadcast(f"{username} has joined the chat. There are {len(clients)} ppl in the chat.", username, client_socket, clients)
 
 	try:
 		while True:
@@ -85,7 +70,7 @@ def handle_client(client_socket):
 			if (data.lower() == 'quit'):
 				break
 
-			broadcast(data, username, client_socket)
+			broadcast(data, username, client_socket, clients)
 	except (ConnectionResetError, BrokenPipeError):
 		pass
 	finally:
@@ -95,9 +80,7 @@ def handle_client(client_socket):
 		del clients[username]
 		print(f'{get_time()}: User {username} has left the chat. Number of total users is {len(clients)}.')
 
-	return
-
-def broadcast(message, username, sending_client):
+def broadcast(message, username, sending_client, clients):
 	# add time to the message
 	for client in clients.values():
 		if (client != sending_client):
@@ -105,12 +88,17 @@ def broadcast(message, username, sending_client):
 
 if __name__ == "__main__":
 	# Start a thread for the server
-	#server_thread = threading.Thread(target=setup_server)
-	#server_thread.start()
+	PORT = 54332
+	server_socket, clients = setup_server(PORT)
 	
-	setup_server()
+	# Register the signal handler for Ctrl+C
+	signal.signal(signal.SIGINT, signal_handler)
+	
 	while True:
-		client_socket, address = server_socket.accept()
-
-		handle_client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+		# change this because on control c, it gets called - maybe without even a try statement
+		try:
+			client_socket, address = server_socket.accept()
+		except socket.error:
+			break
+		handle_client_thread = threading.Thread(target=handle_client, args=(client_socket,clients))
 		handle_client_thread.start()
