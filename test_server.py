@@ -15,27 +15,33 @@ class TestServerFunctionality(unittest.TestCase):
 		# Start a thread for the server
 		server_thread = threading.Thread(target=setup_server)
 		server_thread.start()
+		# Create a test socket
+		test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		# Simulate the client socket connecting to the server
+		test_socket.connect(('localhost', PORT))
+
+		handle_client_thread = threading.Thread(target=handle_client, args=(test_socket,))
+		handle_client_thread.start()
 	
 	def tearDown(self) -> None:
 		cleanup()
 
 	def test_client_connection(self):
-		# Create a test socket
-		test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		
 
 		# Start a thread for the server
 		# server_thread = threading.Thread(target=setup_server)
 		# server_thread.start()
 
 		try:
-			# Simulate the client socket connecting to the server
-			test_socket.connect(('localhost', PORT))
+			
 
 			# Wait for the server to handle the connection
 			time.sleep(1)
 
 			# Check if the test client is in the clients dictionary on the server side
 			self.assertIn(test_socket, get_clients().values())
+			self.assertIs(len(get_clients()) == 1)
 
 		except Exception as e:
 			print(f"Error in receive_message: {e}")

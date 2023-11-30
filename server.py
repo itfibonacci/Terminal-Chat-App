@@ -40,6 +40,11 @@ def setup_server():
 	global clients
 	clients = {}
 
+def tearDown():
+	for client_socket in get_clients().values():
+		client_socket.close()
+	server_thread.join()
+
 def get_clients():
 	return clients
 
@@ -100,9 +105,10 @@ def broadcast(message, username, sending_client):
 
 if __name__ == "__main__":
 	# Start a thread for the server
-	server_thread = threading.Thread(target=setup_server)
-	server_thread.start()
+	#server_thread = threading.Thread(target=setup_server)
+	#server_thread.start()
 	
+	setup_server()
 	while True:
 		client_socket, address = server_socket.accept()
 
