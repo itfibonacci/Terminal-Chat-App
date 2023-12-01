@@ -54,7 +54,7 @@ def send_message(client_socket):
 			
 			message = input()
 			if (message.lower() == 'quit'):
-				cleanup()
+				cleanup(client_socket)
 				break
 			try:
 				client_socket.send(message.encode('utf-8'))

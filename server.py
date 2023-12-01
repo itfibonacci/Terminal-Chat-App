@@ -52,6 +52,12 @@ def get_hour_minute():
 	# return the formatted time
 	return formatted_time
 
+def valid_username(username, clients):
+	if (username in clients.keys()):
+		return False
+	else:
+		return True
+	
 def handle_client(client_socket, clients):
 	# send a message to the client saying you have been connected and the current time
 	# Get the current date and time
