@@ -1,3 +1,6 @@
+#### finish up the tasks below
+### create a threads list that holds all the threads
+
 from datetime import datetime
 import socket
 import threading
@@ -5,13 +8,14 @@ import signal
 # 1. consider adding a functionality where each socket is related to a username.. so the server has a dictionary where each username points to the socket --- done
 # 2. add functionality to not allow joining if the username already exists
 # 3. replace even the client that sends the message with the same message that the server broadcasts to others
-
+# 4 make sure to join all the threads at the end
 # idea is to trap control c and exit gracefully
-def signal_handler(sig, frame):
-	print("\nCtrl-c detected. Exiting gracefully.")
-	cleanup()
 
-def cleanup():
+def signal_handler(sig, frame, cleanup, clients, server_socket):
+	print("\nCtrl-c detected. Exiting gracefully.")
+	cleanup(clients, server_socket)
+
+def cleanup(clients, server_socket):
 	# Additional cleanup or exit actions can be added here
 	print(f'{get_time()}: Server is shutting down')
 	#shutdown_event.set()
@@ -22,7 +26,6 @@ def cleanup():
 
 def setup_server(PORT):
 	print(f'{get_time()}: Server is starting up...')
-
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server_socket.bind(('localhost', PORT))
 	server_socket.listen(5)
@@ -31,7 +34,7 @@ def setup_server(PORT):
 	return server_socket, clients
 
 def tearDown(clients, server_thread):
-	for client_socket in get_clients().values():
+	for client_socket in clients.values():
 		client_socket.close()
 	server_thread.join()
 
@@ -58,8 +61,8 @@ def handle_client(client_socket, clients):
 	username = client_socket.recv(1024).decode('utf-8')
 
 	clients[username] = client_socket
-	print('{}: User {} has joined the chat.'.format(get_time(), username))
-	client_socket.send("{}: Welcome to the chat {}".format(get_time(), username).encode('utf-8'))
+	print(f'{get_time()}: User {username} has joined the chat. There are {len(clients)} ppl in the chat.')
+	client_socket.send(f'{get_time()}: User {username} has joined the chat. There are {len(clients)} ppl in the chat.'.encode('utf-8'))
 	
 	broadcast(f"{username} has joined the chat. There are {len(clients)} ppl in the chat.", username, client_socket, clients)
 
@@ -80,6 +83,8 @@ def handle_client(client_socket, clients):
 		del clients[username]
 		print(f'{get_time()}: User {username} has left the chat. Number of total users is {len(clients)}.')
 
+		broadcast(f'{get_time()}: User {username} has left the chat. Number of total users is {len(clients)}.', username, client_socket, clients)
+
 def broadcast(message, username, sending_client, clients):
 	# add time to the message
 	for client in clients.values():
@@ -92,7 +97,9 @@ if __name__ == "__main__":
 	server_socket, clients = setup_server(PORT)
 	
 	# Register the signal handler for Ctrl+C
-	signal.signal(signal.SIGINT, signal_handler)
+	signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, cleanup, clients, server_socket))
+
+	threads = []
 	
 	while True:
 		# change this because on control c, it gets called - maybe without even a try statement
@@ -102,3 +109,8 @@ if __name__ == "__main__":
 			break
 		handle_client_thread = threading.Thread(target=handle_client, args=(client_socket,clients))
 		handle_client_thread.start()
+		threads.append(handle_client_thread)
+	
+	for thread in threads:
+		print(f'{get_time()}: Waiting for thread {thread.ident} to close.')
+		thread.join()
