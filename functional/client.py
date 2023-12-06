@@ -6,14 +6,25 @@ import signal
 def initial_setup():
 	client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	client_socket.connect(('localhost', PORT))
+	
+	while True:
+		message_asking_for_username = client_socket.recv(1024).decode('utf-8')
+		print(message_asking_for_username, end="")
+		username = input()
+		client_socket.send(username.encode('utf-8'))
 
-	welcome_message = client_socket.recv(1024).decode('utf-8')
-	print(welcome_message + ": ", end="")
+		message_validating_username = client_socket.recv(1024).decode('utf-8')
+		print(message_validating_username == f"Username {username} is taken. Please type your username: ")
+		print(f"Username {username} is taken. Please type your username: ")
+		print(message_validating_username)
+		if (message_validating_username == f"Username {username} is taken. Please type your username: "):
+			continue
+		else:
+			# for now can be improved later
+			break
 
-	username = input()
-	client_socket.send(username.encode('utf-8'))
-	welcome_message_username = client_socket.recv(1024).decode('utf-8')
-	print(welcome_message_username)
+	#welcome_message_username = client_socket.recv(1024).decode('utf-8')
+	print(message_validating_username)
 
 	return client_socket, username
 

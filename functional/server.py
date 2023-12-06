@@ -20,7 +20,9 @@ def cleanup(clients, server_socket):
 	print(f'{get_time()}: Server is shutting down')
 	#shutdown_event.set()
 	for client in clients.values():
+		print(f'{get_time()}: Closing client connection {client}')
 		client.close()
+	print(f'{get_time()}: Closing server socket {server_socket}')
 	server_socket.close()
 	#sys.exit(0)
 
@@ -62,9 +64,13 @@ def handle_client(client_socket, clients):
 	# send a message to the client saying you have been connected and the current time
 	# Get the current date and time
 	print('{}: Established a connection with socket: {}'.format(get_time(),client_socket))
-
-	client_socket.send("Please type your username".encode('utf-8'))
-	username = client_socket.recv(1024).decode('utf-8')
+	
+	while True:
+		client_socket.send("Please type your username: ".encode('utf-8'))
+		username = client_socket.recv(1024).decode('utf-8')
+		if (valid_username(username, clients)):
+			break
+		client_socket.send(f'Username {username} is taken. '.encode('utf-8'))
 
 	clients[username] = client_socket
 	print(f'{get_time()}: User {username} has joined the chat. There are {len(clients)} ppl in the chat.')
